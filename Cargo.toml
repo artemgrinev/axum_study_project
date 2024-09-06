@@ -4,3 +4,21 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+clippy = "0.0.302"
+
+
+chrono = "0.4"
+
+#env
+dotenvy = "0.15.7"
+
+#axum
+axum = "0.7.5"
+tokio = { version = "1.40.0", features = ["full"] }
+
+#postgresql
+tokio-postgres = "0.7"
+
+#serde
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = { version = "1.0.127" }

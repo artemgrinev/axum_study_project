@@ -1,6 +1,7 @@
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-
+use log::{info, error};
+use env_logger;
 use std::env;
 use std::sync::Arc;
 use dotenvy::dotenv;
@@ -35,10 +36,10 @@ fn load_env() {
 async fn get_db() -> Result<Client, Box<dyn std::error::Error>> {
     let database_url = env::var("DATABASE_URL")?;
     let (client, connection) = tokio_postgres::connect(&database_url, NoTls).await?;
-
+    info!("Successfully connected to the database");
     task::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("connection error: {e}");
+            error!("Database connection error: {}", e);
         }
     });
 
@@ -50,9 +51,11 @@ async fn create_order(
     Json(payload): Json<Order>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let mut client = client.lock().await;
+    info!("Received order creation request: {:?}", payload);
     let transaction = match client.transaction().await {
         Ok(tx) => tx,
         Err(e) => {
+            error!("Failed to start transaction: {}", e);
             return Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"success": false, "message": e.to_string()})),
@@ -77,12 +80,13 @@ async fn create_order(
     }
 
     if let Err(e) = transaction.commit().await {
+        error!("Failed to commit transaction: {}", e);
         return Ok((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"success": false, "message": e.to_string()})),
         ));
     }
-
+    info!("Order created successfully: {:?}", payload);
     Ok((
         StatusCode::CREATED,
         Json(json!({"success": true, "message": "Order created"})),
@@ -116,7 +120,7 @@ fn handle_order_error(e: OrderError) -> (StatusCode, Json<serde_json::Value>) {
             String::new(),
         ),
     };
-
+    error!("Order creation failed: {}", message);
     (
         status,
         Json(json!({
@@ -158,7 +162,7 @@ impl From<serde_json::Error> for OrderError {
 }
 
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Order {
     order_uid: String,
     track_number: String,
@@ -258,7 +262,7 @@ impl Order {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Delivery {
     name: String,
     phone: String,
@@ -269,7 +273,7 @@ struct Delivery {
     email: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Payment {
     transaction: String,
     request_id: String,
@@ -283,7 +287,7 @@ struct Payment {
     custom_fee: i32,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Item {
     chrt_id: i64,
     track_number: String,
@@ -302,24 +306,44 @@ struct Item {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
     load_env();
+    env_logger::init();
 
     let server_address: String = env::var("SERVER_ADDRESS").unwrap_or("127.0.0.1:8080".to_owned());
-    println!("Server address: {server_address}");
+    info!("Server address: {server_address}");
 
-    let client = get_db().await?;
+    let client = match get_db().await {
+        Ok(client) => {
+            info!("Database client created successfully");
+            client
+        },
+        Err(e) => {
+            error!("Failed to connect to the database: {}", e);
+            return Err(e.into());
+        }
+    };
     let client_arc = Arc::new(Mutex::new(client));
 
     let app = Router::new()
         .route("/", get(|| async { "Hello world" }))
         .route("/order", post(create_order))
         .with_state(client_arc.clone());
+    info!("Application routes configured");
 
-    let listener = TcpListener::bind(&server_address)
-        .await
-        .expect("Could not create listener");
+    let listener = match TcpListener::bind(&server_address).await {
+        Ok(listener) => {
+            info!("Listener created on {}", server_address);
+            listener
+        },
+        Err(e) => {
+            error!("Failed to create listener on {}: {}", server_address, e);
+            return Err(e.into());
+        }
+    };
 
-    axum::serve(listener, app)
-        .await
-        .expect("Error serving applications");
+    if let Err(e) = axum::serve(listener, app).await {
+        error!("Error serving application: {}", e);
+        return Err(e.into());
+    }
+    info!("Server is running");
 Ok(())
 }

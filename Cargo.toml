@@ -7,6 +7,8 @@ edition = "2021"
 #log
 log = "0.4"
 env_logger = "0.11"
+fern = "0.6"
+chrono = "0.4.38"
 
 #env
 dotenvy = "0.15.7"

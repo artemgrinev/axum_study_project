@@ -1,11 +1,12 @@
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 use log::{info, error};
-use env_logger;
-use std::env;
+use fern::Dispatch;
+// use env_logger;
+use chrono::Local;
+use std::{env, fs, io};
 use std::sync::Arc;
 use dotenvy::dotenv;
-use std::fs;
 use axum::{
     extract::{Json, State},
     http::StatusCode,
@@ -306,7 +307,19 @@ struct Item {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
     load_env();
-    env_logger::init();
+    let dispatch = Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{} [{}] - {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Debug)
+        .chain(io::stdout());
+
+    dispatch.apply()?;
 
     let server_address: String = env::var("SERVER_ADDRESS").unwrap_or("127.0.0.1:8080".to_owned());
     info!("Server address: {server_address}");

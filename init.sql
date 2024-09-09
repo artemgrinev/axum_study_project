@@ -12,7 +12,7 @@ CREATE TABLE customers (
 CREATE TABLE orders (
     order_uid VARCHAR PRIMARY KEY,
     track_number VARCHAR,
-    entry INT,
+    entry VARCHAR,
     locale VARCHAR,
     internal_signature VARCHAR,
     customer_id VARCHAR REFERENCES customers(customer_id),

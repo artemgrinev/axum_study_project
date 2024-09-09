@@ -172,6 +172,7 @@ dependencies = [
  "env_logger",
  "fern",
  "log",
+ "num-traits",
  "serde",
  "serde_json",
  "tokio",
@@ -257,6 +258,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-targets",
 ]

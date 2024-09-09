@@ -2,9 +2,11 @@
 #![warn(clippy::pedantic)]
 mod order_errors;
 mod order_handler;
+mod get_order_by_id;
 mod models;
 mod order_impl;
 use order_handler::create_order;
+use get_order_by_id::get_order;
 
 use log::{info, error};
 use fern::Dispatch;
@@ -81,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let client_arc = Arc::new(Mutex::new(client));
 
     let app = Router::new()
-        .route("/", get(|| async { "Hello world" }))
+        .route("/order/:order_uid", get(get_order))
         .route("/order", post(create_order))
         .layer(Extension(client_arc));
     info!("Application routes configured");

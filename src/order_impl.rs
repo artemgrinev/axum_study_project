@@ -1,14 +1,42 @@
 use tokio_postgres::Transaction;
 use crate::models::Order;
-use crate::order_errors::{OrderError, ValidationError};
-use num_traits::cast::ToPrimitive;
+use crate::order_errors::OrderError;
+use serde_json::Value;
+// use num_traits::cast::ToPrimitive;
 
 
-impl Order {
-    pub async fn insert_customer(&self, tx: &Transaction<'_>) -> Result<(), OrderError> {
-        if self.customer_id.is_empty() {
-            return Err(ValidationError::MissingField("customer_id".to_string()).into());
+impl Order {    
+
+    pub fn validate_fields(&self) -> Result<(), OrderError> {
+        let json_value: Value = serde_json::to_value(self).map_err(OrderError::Deserialization)?;
+        if let Value::Object(fields) = json_value {
+            for (key, value) in fields {
+                match value {
+                    Value::Array(arr) => {
+                        for item in arr {
+                            if let Value::String(s) = item {
+                                if s.is_empty() {
+                                    return Err(OrderError::Validation(format!("{} is empty", key)));
+                                }
+                            }
+                        }
+                    }
+                    Value::String(s) => {
+                        if s.is_empty() {
+                            return Err(OrderError::Validation(format!("{} is empty", key)));
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
+        Ok(())
+    }
+
+    pub async fn insert_customer(&self, tx: &Transaction<'_>) -> Result<(), OrderError> {
+        // if self.customer_id.is_empty() {
+        //     return Err(ValidationError::MissingField("customer_id".to_string()).into());
+        // }
         tx.execute(
             "INSERT INTO customers (customer_id, name, phone, zip, city, address, region, email) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              ON CONFLICT (customer_id) DO NOTHING",
@@ -45,7 +73,7 @@ impl Order {
     }
 
     pub async fn insert_payment(&self, tx: &Transaction<'_>) -> Result<(), OrderError> {
-        let payment_dt_str = self.payment.payment_dt.to_f32();
+        // let payment_dt_str = self.payment.payment_dt.to_f32();
         tx.execute(
             "INSERT INTO payment (transaction, order_uid, request_id, currency, provider, amount, payment_dt, bank, delivery_cost, goods_total, custom_fee) VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7), $8, $9, $10, $11)",
             &[
@@ -55,7 +83,8 @@ impl Order {
                 &self.payment.currency,
                 &self.payment.provider,
                 &self.payment.amount,
-                &payment_dt_str,
+                // payment_dt_str
+                &(self.payment.payment_dt as f64),
                 &self.payment.bank,
                 &self.payment.delivery_cost,
                 &self.payment.goods_total,
@@ -88,3 +117,4 @@ impl Order {
         Ok(())
     }
 }
+

@@ -2,11 +2,10 @@
 #![warn(clippy::pedantic)]
 mod order_errors;
 mod order_handler;
-mod get_order_by_id;
 mod models;
 mod order_impl;
-use order_handler::create_order;
-use get_order_by_id::get_order;
+use order_handler::{create_order, get_order_by_id};
+
 
 use log::{info, error};
 use fern::Dispatch;
@@ -17,7 +16,7 @@ use dotenvy::dotenv;
 use axum::{
     routing::{get, post},
     Router,
-    Extension
+    // Extension
 };
 use tokio::task;
 use tokio::net::TcpListener;
@@ -53,6 +52,7 @@ async fn get_db() -> Result<Client, Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
     load_env();
+
     let dispatch = Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -83,9 +83,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let client_arc = Arc::new(Mutex::new(client));
 
     let app = Router::new()
-        .route("/order/:order_uid", get(get_order))
+        .route("/order/:order_uid", get(get_order_by_id))
         .route("/order", post(create_order))
-        .layer(Extension(client_arc));
+        // .layer(Extension(client_arc));
+        .with_state(client_arc);
     info!("Application routes configured");
 
     let listener = match TcpListener::bind(&server_address).await {

@@ -2,28 +2,38 @@ use tokio_postgres::Transaction;
 use crate::models::Order;
 use crate::order_errors::OrderError;
 use serde_json::Value;
-// use num_traits::cast::ToPrimitive;
+use log::error;
 
-
-impl Order {    
-
+// сдесь я реализую основные трейты для Order
+impl Order {
+    // Валидация полей json и обработка ошибки
     pub fn validate_fields(&self) -> Result<(), OrderError> {
-        let json_value: Value = serde_json::to_value(self).map_err(OrderError::Deserialization)?;
+        // тут пытаюсь поймать неуловимую ошибку десериализации
+        let json_value: Value = serde_json::to_value(self).map_err(|err| {
+            error!("Failed to serialize to JSON: {}", err);
+            OrderError::Deserialization(err)
+        })?;
         if let Value::Object(fields) = json_value {
             for (key, value) in fields {
                 match value {
-                    Value::Array(arr) => {
-                        for item in arr {
-                            if let Value::String(s) = item {
+                    Value::Object(f) => {
+                        for (k, i) in f {
+                            if let Value::String(s) = i {
                                 if s.is_empty() {
-                                    return Err(OrderError::Validation(format!("{} is empty", key)));
+                                    return Err(OrderError::Validation {
+                                        msg: format!("{} is empty", k),
+                                        field: k.to_string(),
+                                    });
                                 }
                             }
                         }
                     }
                     Value::String(s) => {
                         if s.is_empty() {
-                            return Err(OrderError::Validation(format!("{} is empty", key)));
+                            return Err(OrderError::Validation {
+                                msg: format!("{} is empty", key),
+                                field: key.to_string(),
+                            });
                         }
                     }
                     _ => {}
@@ -32,11 +42,11 @@ impl Order {
         }
         Ok(())
     }
+    // Танцы с бубно вокруг полей содержаших типы date, в итоге конвертацию провожу на уровне sql запроса
+    // что наверное не есть хорошо
+    // пытался и через NativeDateTime и DateTime<Utc> но совсем запутался
 
     pub async fn insert_customer(&self, tx: &Transaction<'_>) -> Result<(), OrderError> {
-        // if self.customer_id.is_empty() {
-        //     return Err(ValidationError::MissingField("customer_id".to_string()).into());
-        // }
         tx.execute(
             "INSERT INTO customers (customer_id, name, phone, zip, city, address, region, email) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              ON CONFLICT (customer_id) DO NOTHING",

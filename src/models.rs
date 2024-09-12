@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
-// use chrono::{DateTime, Utc};
-// use chrono::serde::ts_seconds;
-
+// не определился с названием самого файла схемы или модели?
+// Создаю структуры для обработки запроса serde нужен для сереализации и десериализации json
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Delivery {
     pub name: String,

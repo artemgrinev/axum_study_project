@@ -15,7 +15,7 @@ use tokio_postgres::{Client, Row};
 // импортиру собственные модули
 use crate::{
     models::{
-        Order, Delivery, Payment, Item, OrderResponse, Pagination
+        Order, OrderResponse, Pagination
     },
     order_errors::OrderError
 };
@@ -248,7 +248,7 @@ pub async fn get_orders(
             error!("Failed to query: {}", e);
             OrderError::Database(e)
         })?;
-        
+
         let mut orders = Vec::new();
 
         for row in rows {

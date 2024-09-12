@@ -7,7 +7,10 @@ use axum::{
 };
 use serde_json::json;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::{
+    sync::Mutex,
+    time::{timeout, Duration}
+};
 use tokio_postgres::{Client, Row};
 // импортиру собственные модули
 use crate::{
@@ -41,14 +44,22 @@ pub async fn create_order(
     let mut client = client.lock().await;
     info!("Received order creation request: {:?}", payload);
     // создаем транзакцию
-    let transaction = client
-        .transaction()
-        .await
-        .map_err(|e| {
-            error!("Failed to start transaction: {}", e);
-            OrderError::Database(e)
-        })?;
-    // подготавливаем данные для комита в базу
+    // используем tokio timeout для 
+    let transaction = timeout(
+        Duration::from_secs(5), // Устанавливаем таймаут на 5 секунд
+        client.transaction(),
+    )
+    .await
+    .map_err(|_| {
+        error!("Transaction start timed out");
+        OrderError::Timeout
+    })?
+    .map_err(|e| {
+        error!("Failed to start transaction: {}", e);
+        OrderError::Database(e)
+    })?;
+
+    // подготавливаю данные для комита в базу
     payload.insert_customer(&transaction).await?;
 
     payload.insert_order(&transaction).await?;
@@ -57,7 +68,16 @@ pub async fn create_order(
 
     payload.insert_items(&transaction).await?;
     // комитим
-    transaction.commit().await.map_err(|e| {
+    timeout(
+        Duration::from_secs(5),
+        transaction.commit(),
+    )
+    .await
+    .map_err(|_| {
+        error!("Commit timed out");
+        OrderError::Timeout
+    })?
+    .map_err(|e| {
         error!("Failed to commit transaction: {}", e);
         OrderError::Database(e)
     })?;
@@ -126,11 +146,18 @@ pub async fn get_order_by_id(
         WHERE o.order_uid = $1
     ";
 
-    let rows: Vec<Row> = client
+    let rows: Vec<Row> = timeout(
+        Duration::from_secs(5),
+        client
         .query(query, &[&order_uid])
+    )
         .await
+        .map_err(|_| {
+            error!("query timed out");
+            OrderError::Timeout
+        })?
         .map_err(|e| {
-            error!("Database query failed: {}", e);
+            error!("Failed query: {}", e);
             OrderError::Database(e)
         })?;
 
@@ -204,7 +231,9 @@ pub async fn get_orders(
 
     let client = client.lock().await;
 
-    let rows = client
+    let rows = timeout(
+        Duration::from_secs(5),
+        client
         .query(
             r#"
             SELECT 
@@ -257,7 +286,16 @@ pub async fn get_orders(
             "#,
             &[&limit, &offset],
         )
-        .await?;
+    )
+        .await
+        .map_err(|_| {
+            error!("query timed out");
+            OrderError::Timeout
+        })?
+        .map_err(|e| {
+            error!("Failed to query: {}", e);
+            OrderError::Database(e)
+        })?;
 
     let mut orders = Vec::new();
 

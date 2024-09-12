@@ -20,6 +20,7 @@ use log::error;
 // Тут создаю enum которое содержит типы ошибок которые я хочу обработать
 pub enum OrderError {
     Deserialization(serde_json::Error),
+    Timeout,
     Validation{msg: String, field: String},
     Database(tokio_postgres::Error),
 }
@@ -45,6 +46,7 @@ impl fmt::Display for OrderError {
             OrderError::Validation { msg, field: _ } => write!(f, "Validation error: {msg}"),
             OrderError::Deserialization(err) => write!(f, "Deserialization error: {err}"),
             OrderError::Database(err) => write!(f, "Database error: {err}"),
+            OrderError::Timeout => write!(f, "Timeout error"),
         }
     }
 }
@@ -85,6 +87,12 @@ impl IntoResponse for OrderError {
                 msg.to_string(),
                 field.to_string(),
             ),
+
+            OrderError::Timeout => (
+                StatusCode::REQUEST_TIMEOUT,
+                "Timeout error".to_string(),
+                String::new(),
+            )
         };
         // тут отправляю готовый json в ответ
         (status, Json(json!({ "success": false, "message": message, "field": field }))).into_response()

@@ -19,6 +19,10 @@ impl Order {
                 match value {
                     Value::Object(f) => {
                         for (k, i) in f {
+                            // Поле request_id может быть пусты поэтому я его пропускаю
+                            if k == "request_id" {
+                                continue;
+                            }
                             if let Value::String(s) = i {
                                 if s.is_empty() {
                                     return Err(OrderError::Validation {

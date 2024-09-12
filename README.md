@@ -23,7 +23,7 @@
 1. **Клонирование репозитория:**
 
    ```bash
-   git clone https://github.com/yourusername/your-repo.git
+   git clone https://github.com/artemgrinev/axum_study_project.git
    cd your-repo
 
 2. **Запуск приложения:**

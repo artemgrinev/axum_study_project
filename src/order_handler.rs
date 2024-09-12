@@ -169,55 +169,7 @@ pub async fn get_order_by_id(
         });
     }
 
-    let row = &rows[0];
-    // все те же пляски во круг дат
-    // let payment_unix_timestamp: i64 = row.get("payment_unix_timestamp");
-    // let payment_dt = payment_unix_timestamp as i64;
-    let order = Order {
-        order_uid: row.get("order_uid"),
-        track_number: row.get("track_number"),
-        entry: row.get("entry"),
-        delivery: Delivery {
-            name: row.get("name"),
-            phone: row.get("phone"),
-            zip: row.get("zip"),
-            city: row.get("city"),
-            address: row.get("address"),
-            region: row.get("region"),
-            email: row.get("email"),
-        },
-        payment: Payment {
-            transaction: row.get("transaction"),
-            request_id: row.get("request_id"),
-            currency: row.get("currency"),
-            provider: row.get("provider"),
-            amount: row.get("amount"),
-            payment_dt: row.get("payment_unix_timestamp"),
-            bank: row.get("bank"),
-            delivery_cost: row.get("delivery_cost"),
-            goods_total: row.get("goods_total"),
-            custom_fee: row.get("custom_fee"),
-        },
-        items: vec![Item {
-            chrt_id: row.get("chrt_id"),
-            track_number: row.get("track_number"),
-            price: row.get("price"),
-            rid: row.get("rid"),
-            name: row.get("name"),
-            sale: row.get("sale"),
-            size: row.get("size"),
-            total_price: row.get("total_price"),
-            nm_id: row.get("nm_id"),
-            brand: row.get("brand"),
-            status: row.get("status"),
-        }],
-        delivery_service: row.get("delivery_service"),
-        customer_id: row.get("customer_id"),
-        shardkey: row.get("shardkey"),
-        sm_id: row.get("sm_id"),
-        date_created: row.get("date_created"),
-        oof_shard: row.get("oof_shard"),
-    };
+    let order = Order::from_row(&rows[0]);
 
     Ok(Json(order))
 }
@@ -296,60 +248,15 @@ pub async fn get_orders(
             error!("Failed to query: {}", e);
             OrderError::Database(e)
         })?;
+        
+        let mut orders = Vec::new();
 
-    let mut orders = Vec::new();
-
-    for row in rows {
-        let order = Order {
-            order_uid: row.get("order_uid"),
-            track_number: row.get("track_number"),
-            entry: row.get("entry"),
-            delivery: Delivery {
-                name: row.get("name"),
-                phone: row.get("phone"),
-                zip: row.get("zip"),
-                city: row.get("city"),
-                address: row.get("address"),
-                region: row.get("region"),
-                email: row.get("email"),
-            },
-            payment: Payment {
-                transaction: row.get("transaction"),
-                request_id: row.get("request_id"),
-                currency: row.get("currency"),
-                provider: row.get("provider"),
-                amount: row.get("amount"),
-                payment_dt: row.get("payment_unix_timestamp"),
-                bank: row.get("bank"),
-                delivery_cost: row.get("delivery_cost"),
-                goods_total: row.get("goods_total"),
-                custom_fee: row.get("custom_fee"),
-            },
-            items: vec![Item {
-                chrt_id: row.get("chrt_id"),
-                track_number: row.get("track_number"),
-                price: row.get("price"),
-                rid: row.get("rid"),
-                name: row.get("name"),
-                sale: row.get("sale"),
-                size: row.get("size"),
-                total_price: row.get("total_price"),
-                nm_id: row.get("nm_id"),
-                brand: row.get("brand"),
-                status: row.get("status"),
-            }],
-            delivery_service: row.get("delivery_service"),
-            customer_id: row.get("customer_id"),
-            shardkey: row.get("shardkey"),
-            sm_id: row.get("sm_id"),
-            date_created: row.get("date_created"),
-            oof_shard: row.get("oof_shard"),
-        };
-
-        orders.push(order);
-    }
-
-    let response = OrderResponse { orders };
+        for row in rows {
+            let order = Order::from_row(&row);
+            orders.push(order);
+        }
+    
+        let response = OrderResponse { orders };
 
     Ok(Json(response))
 }

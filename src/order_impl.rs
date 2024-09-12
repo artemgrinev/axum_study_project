@@ -1,8 +1,9 @@
 use tokio_postgres::Transaction;
-use crate::models::Order;
+use crate::models::{Order, Delivery, Payment, Item};
 use crate::order_errors::OrderError;
 use serde_json::Value;
 use log::error;
+use tokio_postgres::Row;
 
 // сдесь я реализую основные трейты для Order
 impl Order {
@@ -179,4 +180,72 @@ impl Order {
         Ok(())
     }
 }
+// преобразование строк базы данных в соответствующие объекты
+// думаю вынести это сюда будет более логично чем захламлять order_handlers
+impl Order {
+    pub fn from_row(row: &Row) -> Self {
+        Order {
+            order_uid: row.get("order_uid"),
+            track_number: row.get("track_number"),
+            entry: row.get("entry"),
+            delivery: Delivery::from_row(row),
+            payment: Payment::from_row(row),
+            items: vec![Item::from_row(row)],
+            delivery_service: row.get("delivery_service"),
+            customer_id: row.get("customer_id"),
+            shardkey: row.get("shardkey"),
+            sm_id: row.get("sm_id"),
+            date_created: row.get("date_created"),
+            oof_shard: row.get("oof_shard"),
+        }
+    }
+}
 
+impl Delivery {
+    pub fn from_row(row: &Row) -> Self {
+        Delivery {
+            name: row.get("name"),
+            phone: row.get("phone"),
+            zip: row.get("zip"),
+            city: row.get("city"),
+            address: row.get("address"),
+            region: row.get("region"),
+            email: row.get("email"),
+        }
+    }
+}
+
+impl Payment {
+    pub fn from_row(row: &Row) -> Self {
+        Payment {
+            transaction: row.get("transaction"),
+            request_id: row.get("request_id"),
+            currency: row.get("currency"),
+            provider: row.get("provider"),
+            amount: row.get("amount"),
+            payment_dt: row.get("payment_unix_timestamp"),
+            bank: row.get("bank"),
+            delivery_cost: row.get("delivery_cost"),
+            goods_total: row.get("goods_total"),
+            custom_fee: row.get("custom_fee"),
+        }
+    }
+}
+
+impl Item {
+    pub fn from_row(row: &Row) -> Self {
+        Item {
+            chrt_id: row.get("chrt_id"),
+            track_number: row.get("track_number"),
+            price: row.get("price"),
+            rid: row.get("rid"),
+            name: row.get("name"),
+            sale: row.get("sale"),
+            size: row.get("size"),
+            total_price: row.get("total_price"),
+            nm_id: row.get("nm_id"),
+            brand: row.get("brand"),
+            status: row.get("status"),
+        }
+    }
+}

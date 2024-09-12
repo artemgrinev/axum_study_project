@@ -94,7 +94,7 @@ impl IntoResponse for OrderError {
                 String::new(),
             )
         };
-        // тут отправляю готовый json в ответ
+        // тут отправляю готовый json с ошибкой в ответ
         (status, Json(json!({ "success": false, "message": message, "field": field }))).into_response()
     }
 }

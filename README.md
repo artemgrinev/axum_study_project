@@ -1,6 +1,12 @@
 # Rust Application with Docker Compose
 
-Этот проект представляет собой пример Rust приложения, которое взаимодействует с PostgreSQL через Docker Compose. Проект включает в себя сборку и запуск Rust приложения, а также управление базой данных с помощью Docker Compose.
+Этот проект представляет собой пример Rust приложения  
+в проекте используются библиотеки rust:  
+axum  
+tokio  
+tokio-postgres  
+serde_json  
+serde
 
 ## Структура проекта
 

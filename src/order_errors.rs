@@ -3,7 +3,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use tokio_postgres;
 use serde_json::json;
 use std::fmt;
 use log::error;
@@ -43,9 +42,9 @@ impl fmt::Display for OrderError {
     // тут я определяю как именно ошибки будут представлены
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OrderError::Validation { msg, field: _ } => write!(f, "Validation error: {}", msg),
-            OrderError::Deserialization(err) => write!(f, "Deserialization error: {}", err),
-            OrderError::Database(err) => write!(f, "Database error: {}", err),
+            OrderError::Validation { msg, field: _ } => write!(f, "Validation error: {msg}"),
+            OrderError::Deserialization(err) => write!(f, "Deserialization error: {err}"),
+            OrderError::Database(err) => write!(f, "Database error: {err}"),
         }
     }
 }

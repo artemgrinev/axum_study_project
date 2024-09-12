@@ -1,6 +1,18 @@
 use serde::{Deserialize, Serialize};
 // не определился с названием самого файла схемы или модели?
 // Создаю структуры для обработки запроса serde нужен для сереализации и десериализации json
+
+#[derive(Debug, Serialize)]
+pub struct OrderResponse {
+    pub orders: Vec<Order>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Pagination {
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Delivery {
     pub name: String,

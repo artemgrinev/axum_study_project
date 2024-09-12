@@ -4,7 +4,7 @@ mod order_errors;
 mod order_handler;
 mod models;
 mod order_impl;
-use order_handler::{create_order, get_order_by_id};
+use order_handler::{create_order, get_order_by_id, get_orders};
 
 
 use log::{info, error};
@@ -60,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
                 Local::now().format("%Y-%m-%d %H:%M:%S"),
                 record.level(),
                 message
-            ))
+            ));
         })
         .level(log::LevelFilter::Debug)
         .chain(io::stdout());
@@ -77,13 +77,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         },
         Err(e) => {
             error!("Failed to connect to the database: {}", e);
-            return Err(e.into());
+            return Err(e);
         }
     };
     let client_arc = Arc::new(Mutex::new(client));
 
     let app = Router::new()
         .route("/order/:order_uid", get(get_order_by_id))
+        .route("/orders", get(get_orders))
         .route("/order", post(create_order))
         // .layer(Extension(client_arc));
         .with_state(client_arc);

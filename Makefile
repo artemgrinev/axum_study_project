@@ -9,7 +9,7 @@ INIT_FILE=init.sql
 # Цели
 .PHONY: all up down build generate clean bash init
 
-all: generate init up
+all: generate init up run
 
 generate:
 	@if [ ! -f $(ENV_FILE) ]; then \
@@ -38,3 +38,8 @@ clean:
 bash:
 	@echo "Открытие bash в контейнере..."
 	@docker-compose exec postgres bash
+
+run:
+	@echo "Сборка и запуск Rust приложения..."
+	@cargo build --release
+	@cargo run --release
